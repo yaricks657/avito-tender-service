@@ -1,12 +1,15 @@
-package handlers
+package tenders
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"git.codenrock.com/avito-testirovanie-na-backend-1270/cnrprod1725726029-team-79287/zadanie-6105/internal/database"
+	"git.codenrock.com/avito-testirovanie-na-backend-1270/cnrprod1725726029-team-79287/zadanie-6105/internal/handlers"
 	"git.codenrock.com/avito-testirovanie-na-backend-1270/cnrprod1725726029-team-79287/zadanie-6105/internal/manager"
 )
 
@@ -19,7 +22,7 @@ func GetTendersHandler(w http.ResponseWriter, r *http.Request) {
 	// получить параметры из запроса
 	err, errMessage := getParams(r, &dbStruct)
 	if errMessage != "" {
-		sendErrorResponse(w, errMessage, 400)
+		handlers.SendErrorResponse(w, errMessage, 400)
 		manager.Mng.Log.LogError(errMessage, err)
 		return
 	}
@@ -28,14 +31,14 @@ func GetTendersHandler(w http.ResponseWriter, r *http.Request) {
 	tenders, statusCode, err := dbStruct.GetTenders()
 	if err != nil {
 		manager.Mng.Log.LogError("Ошибка при обращении к БД: ", err)
-		sendErrorResponse(w, fmt.Sprintf("Ошибка при обращении к БД: %s", err), statusCode)
+		handlers.SendErrorResponse(w, fmt.Sprintf("Ошибка при обращении к БД: %s", err), statusCode)
 		return
 	}
 
 	jsonResponse, err := json.Marshal(tenders)
 	if err != nil {
 		manager.Mng.Log.LogError("Ошибка при маршалинге данных: ", err)
-		sendErrorResponse(w, fmt.Sprintf("Ошибка при маршалинге данных: %s", err), 500)
+		handlers.SendErrorResponse(w, fmt.Sprintf("Ошибка при маршалинге данных: %s", err), 500)
 		return
 	}
 
@@ -65,6 +68,8 @@ func getParams(r *http.Request, strg *database.Storage) (error, string) {
 			return nil, fmt.Sprintln("Параметр limit превышает максимальное число")
 		}
 		strg.Limit = int32(parsedLimit)
+	} else {
+		strg.Limit = int32(limit)
 	}
 
 	// парсим offset
@@ -77,13 +82,15 @@ func getParams(r *http.Request, strg *database.Storage) (error, string) {
 			return nil, fmt.Sprintln("Параметр limit отрицательный")
 		}
 		strg.Offset = int32(parsedOffset)
+	} else {
+		strg.Offset = int32(offset)
 	}
 
 	// парсим service_type
 	serviceTypes := r.URL.Query()["service_type"]
 	if len(serviceTypes) > 0 {
 		for _, service := range serviceTypes {
-			if !isServiceTypeAllowed(service) {
+			if !handlers.IsServiceTypeAllowed(service) {
 				return nil, fmt.Sprintln("Некорректный параметр service_type")
 			}
 		}
@@ -91,19 +98,51 @@ func getParams(r *http.Request, strg *database.Storage) (error, string) {
 	}
 
 	// парсим user_name
-	if user := r.URL.Query().Get("user_name"); user != "" {
+	if user := r.URL.Query().Get("username"); user != "" {
 		strg.Username = user
 	}
 
-	return nil, ""
-}
+	// парсим статус
+	if status := r.URL.Query().Get("status"); status != "" {
+		strg.Status = status
+	}
 
-// Функция для проверки, есть ли строка в массиве
-func isServiceTypeAllowed(serviceType string) bool {
-	for _, t := range allowedServiceTypes {
-		if t == serviceType {
-			return true
+	// Получаем полный путь запроса
+	path := r.URL.Path
+	start := strings.Index(path, "/tenders/")
+	if start == -1 {
+		return fmt.Errorf("Invalid path, tenderId not found"), "Invalid path, tenderId not found"
+	}
+	actions := []string{"/status", "/edit", "/rollback"}
+	var end int
+	for _, act := range actions {
+		end = strings.Index(path, act)
+		if end != -1 {
+			break
 		}
 	}
-	return false
+	if end == -1 {
+		return fmt.Errorf("Invalid path, tenderId not found"), "Invalid path, tenderId not found"
+	}
+	tenderID := path[start+len("/tenders/") : end]
+	strg.TenderId = tenderID
+
+	// парсим version тендера
+	// Получаем URL запроса
+	urlPath := r.URL.Path // Например: "/api/tenders/12345/rollback/2"
+	re := regexp.MustCompile(`/rollback/([0-9]+)$`)
+	matches := re.FindStringSubmatch(urlPath)
+	if len(matches) == 2 {
+		version := matches[1] // захватываем версию
+		if version != "" {
+			num, err := strconv.Atoi(version)
+			if err != nil {
+				fmt.Println("Ошибка:", err)
+				return err, fmt.Sprintln("Некорректная версия")
+			}
+			strg.Version = int32(num)
+		}
+	}
+
+	return nil, ""
 }

@@ -11,16 +11,17 @@ import (
 
 // массив разрешенных типов сервисов
 var allowedServiceTypes = [3]string{"Construction", "Delivery", "Manufacture"}
+var allowedStatuses = [3]string{"Published", "Created", "Closed"}
 
 // Статтусы тендеров
 const (
-	statusPublished = "PUBLISHED"
-	statusCreated   = "CREATED"
-	statusClosed    = "CLOSED"
+	StatusPublished = "Published"
+	StatusCreated   = "Created"
+	StatusClosed    = "Closed"
 )
 
 // отправка на клиент ответа об ошибке
-func sendErrorResponse(w http.ResponseWriter, errorMsg string, statusCode int) {
+func SendErrorResponse(w http.ResponseWriter, errorMsg string, statusCode int) {
 	response := models.ErrorResponse{
 		Reason: errorMsg,
 	}
@@ -32,13 +33,39 @@ func sendErrorResponse(w http.ResponseWriter, errorMsg string, statusCode int) {
 	}
 }
 
-// Валидация полей запроса
-func checkRequiredFields(t *models.RequestAddTender) error {
+// Валидация полей запроса Post
+func CheckRequiredFields(t *models.RequestAddTender) error {
 	// проверка ServiceType на валидность
-	if t.ServiceType == "" || !isServiceTypeAllowed(t.ServiceType) {
+	if t.ServiceType == "" || !IsServiceTypeAllowed(t.ServiceType) {
 		return fmt.Errorf("not allowed serviceType")
 	}
-	// проверка на
-
+	// проверка наличия Name
+	if t.Name == "" {
+		return fmt.Errorf("need name")
+	}
+	// проверка наличия Description
+	if t.Description == "" {
+		return fmt.Errorf("need description")
+	}
 	return nil
+}
+
+// Функция для проверки, есть ли строка в массиве
+func IsServiceTypeAllowed(serviceType string) bool {
+	for _, t := range allowedServiceTypes {
+		if t == serviceType {
+			return true
+		}
+	}
+	return false
+}
+
+// Функция для проверки корректного статуса
+func IsStatusAllowed(status string) bool {
+	for _, t := range allowedStatuses {
+		if t == status {
+			return true
+		}
+	}
+	return false
 }

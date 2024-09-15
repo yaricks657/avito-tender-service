@@ -1,4 +1,4 @@
-package handlers
+package tenders
 
 import (
 	"fmt"

@@ -6,7 +6,7 @@ import (
 
 // структура для загрузки переменных окружения
 type Environment struct {
-	ServerAddress    string `env:"SERVER_ADDRESS" env-default:"8080"`
+	ServerAddress    string `env:"SERVER_ADDRESS" env-default:"0.0.0.0:8080"`
 	PostgresConn     string `env:"POSTGRES_CONN" env-default:"postgres://cnrprod1725726029-team-79287:cnrprod1725726029-team-79287@rc1b-5xmqy6bq501kls4m.mdb.yandexcloud.net:6432/cnrprod1725726029-team-79287"`
 	PostgresJdbcUrl  string `env:"POSTGRES_JDBC_URL" env-default:"jdbc:postgresql://rc1b-5xmqy6bq501kls4m.mdb.yandexcloud.net:6432/cnrprod1725726029-team-79287"`
 	PostgresUsername string `env:"POSTGRES_USERNAME" env-default:"cnrprod1725726029-team-79287"`

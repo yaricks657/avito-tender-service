@@ -13,3 +13,12 @@ type RequestAddTender struct {
 	OrganizationId  string `json:"organizationId"`
 	CreatorUsername string `json:"creatorUsername"`
 }
+
+// Структура для запроса создания нового предложения
+type RequestAddBid struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	TenderID    string `json:"tenderId"`
+	AuthorType  string `json:"authorType"`
+	AuthorID    string `json:"authorId"`
+}
